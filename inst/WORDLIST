@@ -142,6 +142,7 @@ Jurafsky
 Kearl
 Kearl's
 keepAcronyms
+Keerthi
 keptFeatures
 keyness
 Keyness
@@ -274,6 +275,7 @@ RStudio
 Rtools
 rx
 Sachtextformeln
+Sathiya
 Schreiben
 Schriftstellern
 se
@@ -281,7 +283,9 @@ segmenter
 segmentSentence
 selectFeatures
 Senter
+SIGIR
 simil
+Sindhwani
 skipgram
 skipgrams
 Slapin
@@ -318,6 +322,9 @@ stri
 stringi
 svd
 svds
+svm
+svmlin
+SVMs
 sy
 TBB
 TDs
@@ -346,6 +353,7 @@ toLower
 topicmodels
 TR
 Tränkle
+transductive
 travis
 Tribble
 trimdfm
@@ -368,6 +376,7 @@ valuetype
 Vanberg
 Vanecek
 VCorpus
+Vikas
 Vm
 vocab
 vocd
