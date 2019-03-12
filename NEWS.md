@@ -4,6 +4,10 @@
 
 * Added a `force = TRUE` option and error checking for the situations of applying `dfm_weight()` or `dfm_group()` to a dfm that has already been weighted.  (#1545)
 
+## New features
+
+* Added a fast linear SVM classifier, `textmodel_svm()`.
+
 
 # quanteda 1.4.1
 
