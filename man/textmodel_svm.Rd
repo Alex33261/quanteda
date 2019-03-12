@@ -14,6 +14,8 @@ contain only the training documents.}
 in \code{train}.  (These will be converted to factors if not already 
 factors.)}
 
+\item{intercept}{logical; if \code{TRUE}, add an intercept to the data}
+
 \item{...}{additional arguments passed to \code{\link[RSSL]{linsvm}}}
 }
 \value{
@@ -23,7 +25,7 @@ object from \code{\link[RSSL]{linsvm}}.
 \description{
 Fit a fast linear SVM classifier for texts, using the R interface to the
 svmlin code by Vikas Sindhwani and S. Sathiya Keerthi for fast linear
-transductive SVMs. This is passed through to \code{\link[RSSL]{linsvm}} as
+transductive SVMs. This is passed through to \code{\link[RSSL]{svmlin}} as
 implemented by the \pkg{RSSL} package.
 }
 \examples{

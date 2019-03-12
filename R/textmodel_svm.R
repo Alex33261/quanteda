@@ -2,7 +2,7 @@
 #' 
 #' Fit a fast linear SVM classifier for texts, using the R interface to the
 #' svmlin code by Vikas Sindhwani and S. Sathiya Keerthi for fast linear
-#' transductive SVMs. This is passed through to \code{\link[RSSL]{linsvm}} as
+#' transductive SVMs. This is passed through to \code{\link[RSSL]{svmlin}} as
 #' implemented by the \pkg{RSSL} package.
 #' @param x the \link{dfm} on which the model will be fit.  Does not need to
 #'   contain only the training documents.
@@ -62,8 +62,10 @@ textmodel_svm.dfm <- function(x, y, intercept = TRUE, ...) {
     result <- list(
         x = x, y = y,
         weights = svmlinfitted@weights,
-        algorithm = factor(svmlinfitted@algorithm, levels = 1:3, 
-                           labels = c("SVM", "Multi-switch Transductive SVM", 
+        algorithm = factor(svmlinfitted@algorithm, levels = 0:3, 
+                           labels = c("Regularized Least Squares Classification",
+                                      "SVM", 
+                                      "Multi-switch Transductive SVM", 
                                       "Deterministic Annealing Semi-supervised SVM")),
         classnames = svmlinfitted@classnames,
         intercept = intercept,
