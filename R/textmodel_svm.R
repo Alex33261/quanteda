@@ -10,10 +10,10 @@
 #'   in \code{train}.  (These will be converted to factors if not already 
 #'   factors.)
 #' @param intercept logical; if \code{TRUE}, add an intercept to the data
-#' @param ... additional arguments passed to \code{\link[RSSL]{linsvm}}
+#' @param ... additional arguments passed to \code{\link[RSSL]{svmlin}}
 #' @return 
 #' \code{textmodel_svm()} returns (for now) an object structured as a return
-#' object from \code{\link[RSSL]{linsvm}}. 
+#' object from \code{\link[RSSL]{svmlin}}. 
 #' @references 
 #' Vikas Sindhwani and S. Sathiya Keerthi (2006).  Large Scale Semi-supervised
 #' Linear SVMs. \emph{Proceedings of ACM SIGIR}.
@@ -21,16 +21,17 @@
 #' V. Sindhwani and S. Sathiya Keerthi (2006).  Newton Methods for Fast Solution of Semi-supervised
 #' Linear SVMs. Book Chapter in \emph{Large Scale Kernel Machines}, MIT Press, 2006.
 #' 
-#' @seealso \code{\link[RSSL]{linsvm}}
+#' @seealso \code{\link[RSSL]{svmlin}}
 #' @examples
 #' # use Lenihan for govt class and Bruton for opposition
 #' docvars(data_corpus_irishbudget2010, "govtopp") <- c("Govt", "Opp", rep(NA, 12))
 #' dfmat <- dfm(data_corpus_irishbudget2010)
 #' 
-#' tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"))
+#' tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), pos_frac = 5/14)
 #' predict(tmod)
 #' 
-#' predict(textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), intercept = FALSE))
+#' predict(textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), intercept = FALSE,
+#'                       pos_frac = 5/14))
 #' @export
 textmodel_svm <- function(x, y, intercept = TRUE, ...) {
     UseMethod("textmodel_svm")

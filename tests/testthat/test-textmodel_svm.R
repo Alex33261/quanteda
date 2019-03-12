@@ -9,7 +9,7 @@ test_that("the svm model works", {
                      d5 = "Chinese Chinese Chinese Tokyo Japan"), 
                    docvars = data.frame(train = factor(c("Y", "Y", "Y", "N", NA))))
     dfmat <- dfm(corp, tolower = FALSE)
-    tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "train"))
+    tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "train"), pos_frac = 0.75)
     
     expect_output(
         print(tmod),
@@ -22,8 +22,11 @@ test_that("the svm model works", {
         tol = .0000001
     )
     
-    tmod2 <- textmodel_svm(dfmat, y = docvars(dfmat, "train"), intercept = FALSE)
-    
+    tmod2 <- textmodel_svm(dfmat, y = docvars(dfmat, "train"), intercept = FALSE, pos_frac = 0.75)
+    expect_identical(
+        predict(tmod2),
+        c(d1 = "Y", d2 = "Y", d3 = "Y", d4 = "N", d5 = "N")
+    )
     expect_equal(names(summary(tmod)), c("call", "estimated.feature.scores"))
         
     expect_identical(

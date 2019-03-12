@@ -16,11 +16,11 @@ factors.)}
 
 \item{intercept}{logical; if \code{TRUE}, add an intercept to the data}
 
-\item{...}{additional arguments passed to \code{\link[RSSL]{linsvm}}}
+\item{...}{additional arguments passed to \code{\link[RSSL]{svmlin}}}
 }
 \value{
 \code{textmodel_svm()} returns (for now) an object structured as a return
-object from \code{\link[RSSL]{linsvm}}.
+object from \code{\link[RSSL]{svmlin}}.
 }
 \description{
 Fit a fast linear SVM classifier for texts, using the R interface to the
@@ -46,5 +46,5 @@ V. Sindhwani and S. Sathiya Keerthi (2006).  Newton Methods for Fast Solution of
 Linear SVMs. Book Chapter in \emph{Large Scale Kernel Machines}, MIT Press, 2006.
 }
 \seealso{
-\code{\link[RSSL]{linsvm}}
+\code{\link[RSSL]{svmlin}}
 }
