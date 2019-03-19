@@ -47,7 +47,6 @@ textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq")
     weight <- match.arg(weight)
     
     y <- factor(y)
-    if (length(levels(y)) != 2) stop("y must contain two values only")
     
     temp <- x[!is.na(y), ]
     class <- y[!is.na(y)]
