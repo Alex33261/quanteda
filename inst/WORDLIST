@@ -48,6 +48,7 @@ corpusSource
 countSyllables
 cpp
 cruft
+csr
 csv
 CTM
 cutoffs
@@ -124,6 +125,7 @@ Harshman
 Herdan
 Herdan's
 Herzog
+Hsieh
 httr
 idf
 ie
@@ -168,6 +170,7 @@ Lexicoder
 Liau
 Liber
 libicu
+LIBLINEAR
 libstemmer
 Linguistik
 Linsear
@@ -296,6 +299,7 @@ Spache's
 spacy
 spaCy
 spacyr
+SparseM
 Sprache
 Sprachforum
 SRM

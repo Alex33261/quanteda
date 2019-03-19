@@ -38,6 +38,7 @@ Imports:
     fastmatch,
     ggplot2 (>= 2.2.0),
     ggrepel,
+    LiblineaR,
     lubridate,
     magrittr,
     Matrix (>= 1.2),
@@ -49,6 +50,7 @@ Imports:
     sna,
     SnowballC,
     spacyr,
+    SparseM,
     stopwords,
     stringi,
     xml2,
@@ -150,6 +152,7 @@ Collate:
     'textmodel_lsa.R'
     'textmodel_nb.R'
     'textmodel_svm.R'
+    'textmodel_svmlin.R'
     'textmodel_wordfish.R'
     'textmodel_wordscores.R'
     'textplot_influence.R'

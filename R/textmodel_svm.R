@@ -1,80 +1,84 @@
 #' Linear SVM classifier for texts
 #' 
-#' Fit a fast linear SVM classifier for texts, using the R interface to the
-#' svmlin code by Vikas Sindhwani and S. Sathiya Keerthi for fast linear
-#' transductive SVMs. This is passed through to \code{\link[RSSL]{svmlin}} as
-#' implemented by the \pkg{RSSL} package.
+#' Fit a fast linear SVM classifier for texts, using the
+#' \pkg{LiblineaR} package.
 #' @param x the \link{dfm} on which the model will be fit.  Does not need to
 #'   contain only the training documents.
 #' @param y vector of training labels associated with each document identified 
 #'   in \code{train}.  (These will be converted to factors if not already 
 #'   factors.)
-#' @param intercept logical; if \code{TRUE}, add an intercept to the data
-#' @param ... additional arguments passed to \code{\link[RSSL]{svmlin}}
-#' @return 
-#' \code{textmodel_svm()} returns (for now) an object structured as a return
-#' object from \code{\link[RSSL]{svmlin}}. 
+#' @param weight weights for different classes for imbalanced training sets,
+#'   passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}
+#'   uses default; \code{"docfreq"} weights by the number of training examples,
+#'   and \code{"termfreq"} by the relative sizes of the training classes in
+#'   terms of their total lengths in tokens.
+#' @param ... additional arguments passed to \code{\link[LiblineaR]{LiblineaR}}
 #' @references 
-#' Vikas Sindhwani and S. Sathiya Keerthi (2006).  Large Scale Semi-supervised
-#' Linear SVMs. \emph{Proceedings of ACM SIGIR}.
-#' 
-#' V. Sindhwani and S. Sathiya Keerthi (2006).  Newton Methods for Fast Solution of Semi-supervised
-#' Linear SVMs. Book Chapter in \emph{Large Scale Kernel Machines}, MIT Press, 2006.
-#' 
-#' @seealso \code{\link[RSSL]{svmlin}}
+#' R. E. Fan, K. W. Chang, C. J. Hsieh, X. R. Wang, and C. J. Lin. (2008)
+#' LIBLINEAR: A Library for Large Linear Classification.
+#' \emph{Journal of Machine Learning Research} 9: 1871-1874.
+#' \url{http://www.csie.ntu.edu.tw/~cjlin/liblinear}.
+#' @seealso \code{\link[LiblineaR]{LiblineaR}}
 #' @examples
 #' # use Lenihan for govt class and Bruton for opposition
 #' docvars(data_corpus_irishbudget2010, "govtopp") <- c("Govt", "Opp", rep(NA, 12))
 #' dfmat <- dfm(data_corpus_irishbudget2010)
 #' 
-#' tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), pos_frac = 5/14)
+#' tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"))
 #' predict(tmod)
-#' 
-#' predict(textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), intercept = FALSE,
-#'                       pos_frac = 5/14))
+#' predict(tmod, type = "probability")
 #' @export
-textmodel_svm <- function(x, y, intercept = TRUE, ...) {
+textmodel_svm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     UseMethod("textmodel_svm")
 }
 
 #' @export
-textmodel_svm.default <- function(x, y, intercept = TRUE, ...) {
+textmodel_svm.default <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     stop(friendly_class_undefined_message(class(x), "textmodel_svm"))
 }    
     
 #' @export
-#' @importFrom RSSL svmlin
-textmodel_svm.dfm <- function(x, y, intercept = TRUE, ...) {
+#' @importFrom LiblineaR LiblineaR
+#' @importFrom SparseM as.matrix.csr
+textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     x <- as.dfm(x)
     if (!sum(x)) stop(message_error("dfm_empty"))
     call <- match.call()
+    weight <- match.arg(weight)
     
     y <- factor(y)
     if (length(levels(y)) != 2) stop("y must contain two values only")
     
-    temp <- x[!is.na(y),]
+    temp <- x[!is.na(y), ]
     class <- y[!is.na(y)]
     temp <- dfm_group(temp, class)
     
-    svmlinfitted <- RSSL::svmlin(X = as(temp, "dgCMatrix"), X_u = NULL,
-                                 y = factor(docnames(temp), levels = docnames(temp)),
-                                 intercept = intercept,
-                                 ...)
+    if (weight == "uniform") {
+        wi <- NULL
+    } else if (weight == "docfreq") {
+        wi <- rowSums(as.matrix(table(class)))
+        wi <- wi / sum(wi)
+    } else if (weight == "termfreq") {
+        wi <- rowSums(temp)
+        wi <- wi / sum(wi)
+    }
+    
+    svmlinfitted <- LiblineaR::LiblineaR(data = as.matrix.csr.dfm(temp),
+                                         target = factor(docnames(temp), levels = docnames(temp)),
+                                         wi = wi,
+                                         ...)
+    colnames(svmlinfitted$W)[seq_along(featnames(x))] <- featnames(x)
     result <- list(
         x = x, y = y,
-        weights = svmlinfitted@weights,
-        algorithm = factor(svmlinfitted@algorithm, levels = 0:3, 
-                           labels = c("Regularized Least Squares Classification",
-                                      "SVM", 
-                                      "Multi-switch Transductive SVM", 
-                                      "Deterministic Annealing Semi-supervised SVM")),
-        classnames = svmlinfitted@classnames,
-        intercept = intercept,
+        weights = svmlinfitted$W,
+        algorithm = svmlinfitted$TypeDetail,
+        type = svmlinfitted$Type,
+        classnames = svmlinfitted$ClassNames,
+        bias = svmlinfitted$Bias,
+        svmlinfitted = svmlinfitted,
         call = call
     )
-    weightnames <- featnames(temp)
-    if (intercept) weightnames <- c("intercept", weightnames)
-    names(result$weights) <- weightnames
+    names(result$weights) <- featnames(x)
     class(result) <- c("textmodel_svm", "textmodel", "list")
     result
 }
@@ -96,6 +100,7 @@ textmodel_svm.dfm <- function(x, y, intercept = TRUE, ...) {
 #'   "probability"}).
 #' @seealso \code{\link{textmodel_svm}}
 #' @keywords textmodel internal
+#' @importFrom SparseM as.matrix.csr
 #' @export
 predict.textmodel_svm <- function(object, newdata = NULL, 
                                   type = c("class", "probability"),
@@ -110,19 +115,19 @@ predict.textmodel_svm <- function(object, newdata = NULL,
         data <- as.dfm(object$x)
     }
 
-    if (object$intercept) {
-        data <- cbind(1, data)
-        colnames(data)[1] <- "intercept"
-    }
-    data <- force_conformance(data, names(object$weights), force)
+    # the seq_along is because this will have an added term "bias" at end if bias > 0
+    data <- force_conformance(data, names(object$weights)[seq_along(featnames(object$x))], force)
     
-    pred_y <- as.numeric(data %*% object$weights)
-    names(pred_y) <- docnames(data)
+    pred_y <- predict(object$svmlinfitted, 
+                      newx = as.matrix.csr.dfm(data),
+                      proba = (type == "probability"))
     
     if (type == "class") {
-        pred_y <- ifelse(pred_y < 0, object$classnames[1], object$classnames[2])
+        pred_y <- as.character(pred_y$predictions)
+        names(pred_y) <- docnames(data)
     } else if (type == "probability") {
-        stop("probability type not implemented yet")
+        pred_y <- pred_y$probabilities
+        rownames(pred_y) <- docnames(data)
     }
     
     pred_y
@@ -174,4 +179,20 @@ coefficients.textmodel_svm <- function(object, ...) {
 #' @method print predict.textmodel_svm
 print.predict.textmodel_svm <- function(x, ...) {
     print(unclass(x))
+}
+
+#' convert a dfm into a matrix.csr from SparseM package
+#' 
+#' Utility to convert a dfm into a \link[SparseM]{matrix.csr} from the \pkg{SparseM} package.
+#' @param x input \link{dfm}
+#' @importFrom SparseM as.matrix.csr
+#' @method as.matrix.csr dfm
+#' @keywords internal
+as.matrix.csr.dfm <- function(x) {
+    # convert first to column sparse format
+    as.matrix.csr(new("matrix.csc", 
+                      ra = x@x,
+                      ja = x@i + 1L,
+                      ia = x@p + 1L,
+                      dimension = x@Dim))
 }

@@ -4,7 +4,7 @@
 \alias{textmodel_svm}
 \title{Linear SVM classifier for texts}
 \usage{
-textmodel_svm(x, y, intercept = TRUE, ...)
+textmodel_svm(x, y, weight = c("uniform", "docfreq", "termfreq"), ...)
 }
 \arguments{
 \item{x}{the \link{dfm} on which the model will be fit.  Does not need to
@@ -14,19 +14,17 @@ contain only the training documents.}
 in \code{train}.  (These will be converted to factors if not already 
 factors.)}
 
-\item{intercept}{logical; if \code{TRUE}, add an intercept to the data}
+\item{weight}{weights for different classes for imbalanced training sets,
+passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}
+uses default; \code{"docfreq"} weights by the number of training examples,
+and \code{"termfreq"} by the relative sizes of the training classes in
+terms of their total lengths in tokens.}
 
-\item{...}{additional arguments passed to \code{\link[RSSL]{svmlin}}}
-}
-\value{
-\code{textmodel_svm()} returns (for now) an object structured as a return
-object from \code{\link[RSSL]{svmlin}}.
+\item{...}{additional arguments passed to \code{\link[LiblineaR]{LiblineaR}}}
 }
 \description{
-Fit a fast linear SVM classifier for texts, using the R interface to the
-svmlin code by Vikas Sindhwani and S. Sathiya Keerthi for fast linear
-transductive SVMs. This is passed through to \code{\link[RSSL]{svmlin}} as
-implemented by the \pkg{RSSL} package.
+Fit a fast linear SVM classifier for texts, using the
+\pkg{LiblineaR} package.
 }
 \examples{
 # use Lenihan for govt class and Bruton for opposition
@@ -35,16 +33,14 @@ dfmat <- dfm(data_corpus_irishbudget2010)
 
 tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"))
 predict(tmod)
-
-predict(textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"), intercept = FALSE))
+predict(tmod, type = "probability")
 }
 \references{
-Vikas Sindhwani and S. Sathiya Keerthi (2006).  Large Scale Semi-supervised
-Linear SVMs. \emph{Proceedings of ACM SIGIR}.
-
-V. Sindhwani and S. Sathiya Keerthi (2006).  Newton Methods for Fast Solution of Semi-supervised
-Linear SVMs. Book Chapter in \emph{Large Scale Kernel Machines}, MIT Press, 2006.
+R. E. Fan, K. W. Chang, C. J. Hsieh, X. R. Wang, and C. J. Lin. (2008)
+LIBLINEAR: A Library for Large Linear Classification.
+\emph{Journal of Machine Learning Research} 9: 1871-1874.
+\url{http://www.csie.ntu.edu.tw/~cjlin/liblinear}.
 }
 \seealso{
-\code{\link[RSSL]{svmlin}}
+\code{\link[LiblineaR]{LiblineaR}}
 }
