@@ -7,6 +7,8 @@
 #' @param y vector of training labels associated with each document identified 
 #'   in \code{train}.  (These will be converted to factors if not already 
 #'   factors.)
+#' @param scale logical; if \code{TRUE}, scale the input dfm by centering on its
+#'   mean and dividing by the standard deviation of feature counts.
 #' @param weight weights for different classes for imbalanced training sets,
 #'   passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}
 #'   uses default; \code{"docfreq"} weights by the number of training examples,
@@ -20,53 +22,58 @@
 #' \url{http://www.csie.ntu.edu.tw/~cjlin/liblinear}.
 #' @seealso \code{\link[LiblineaR]{LiblineaR}}
 #' @examples
-#' # use Lenihan for govt class and Bruton for opposition
-#' docvars(data_corpus_irishbudget2010, "govtopp") <- c("Govt", "Opp", rep(NA, 12))
+#' # use party leaders for govt and opposition classes
+#' docvars(data_corpus_irishbudget2010, "govtopp") <- 
+#'     c(rep(NA, 4), "Govt", "Opp", NA, "Opp", NA, NA, NA, NA, NA, NA)
 #' dfmat <- dfm(data_corpus_irishbudget2010)
-#' 
 #' tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"))
 #' predict(tmod)
 #' predict(tmod, type = "probability")
+#'
+#' # multiclass problem - all party leaders
+#' tmod2 <- textmodel_svm(dfmat, 
+#'     y = c(rep(NA, 3), "SF", "FF", "FG", NA, "LAB", NA, NA, "Green", rep(NA, 3)))
+#' predict(tmod2)
+#' predict(tmod2, type = "probability")
 #' @export
-textmodel_svm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
     UseMethod("textmodel_svm")
 }
 
 #' @export
-textmodel_svm.default <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm.default <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
     stop(friendly_class_undefined_message(class(x), "textmodel_svm"))
 }    
     
 #' @export
 #' @importFrom LiblineaR LiblineaR
 #' @importFrom SparseM as.matrix.csr
-textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm.dfm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
     x <- as.dfm(x)
     if (!sum(x)) stop(message_error("dfm_empty"))
     call <- match.call()
     weight <- match.arg(weight)
     
-    y <- factor(y)
+    # exclude NA in training labels
+    x_train <- dfm_trim(x[!is.na(y), ], min_termfreq = 1)
+    y_train <- y[!is.na(y)]
+    # remove zero-variance features
+    constant_features <- which(apply(x_train, 2, stats::var) == 0)
+    if (length(constant_features)) x_train <- x_train[, -constant_features]
     
-    temp <- x[!is.na(y), ]
-    class <- y[!is.na(y)]
-    temp <- dfm_group(temp, class)
-    
+    # set wi depending on weight value
     if (weight == "uniform") {
         wi <- NULL
     } else if (weight == "docfreq") {
-        wi <- rowSums(as.matrix(table(class)))
-        wi <- wi / sum(wi)
+        wi <- prop.table(table(y_train))
     } else if (weight == "termfreq") {
-        wi <- rowSums(temp)
+        wi <- rowSums(dfm_group(x_train, y_train))
         wi <- wi / sum(wi)
     }
     
-    svmlinfitted <- LiblineaR::LiblineaR(data = as.matrix.csr.dfm(temp),
-                                         target = factor(docnames(temp), levels = docnames(temp)),
-                                         wi = wi,
-                                         ...)
-    colnames(svmlinfitted$W)[seq_along(featnames(x))] <- featnames(x)
+    svmlinfitted <- LiblineaR::LiblineaR(data = if (scale) scale(x_train) else as.matrix.csr.dfm(x_train),
+                                         target = y_train, wi = wi, ...)
+    colnames(svmlinfitted$W)[seq_along(featnames(x_train))] <- featnames(x_train)
     result <- list(
         x = x, y = y,
         weights = svmlinfitted$W,
@@ -75,9 +82,9 @@ textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq")
         classnames = svmlinfitted$ClassNames,
         bias = svmlinfitted$Bias,
         svmlinfitted = svmlinfitted,
+        scale = scale,
         call = call
     )
-    names(result$weights) <- featnames(x)
     class(result) <- c("textmodel_svm", "textmodel", "list")
     result
 }
@@ -103,7 +110,7 @@ textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq")
 #' @export
 predict.textmodel_svm <- function(object, newdata = NULL, 
                                   type = c("class", "probability"),
-                                  force = FALSE, ...) {
+                                  force = TRUE, ...) {
     unused_dots(...)
     
     type <- match.arg(type)
@@ -113,9 +120,18 @@ predict.textmodel_svm <- function(object, newdata = NULL,
     } else {
         data <- as.dfm(object$x)
     }
+    
+    # scale the test data if the training data was also scaled
+    if (object$scale) data <- as.dfm(scale(data))
 
     # the seq_along is because this will have an added term "bias" at end if bias > 0
-    data <- force_conformance(data, names(object$weights)[seq_along(featnames(object$x))], force)
+    model_featnames <- colnames(object$weights)
+    if (object$bias > 0) model_featnames <- model_featnames[-length(model_featnames)]
+    
+    data <- if (is.null(newdata))
+        suppressWarnings(force_conformance(data, model_featnames, force))
+    else 
+        force_conformance(data, model_featnames, force)
     
     pred_y <- predict(object$svmlinfitted, 
                       newx = as.matrix.csr.dfm(data),
@@ -138,9 +154,10 @@ print.textmodel_svm <- function(x, ...) {
     cat("\nCall:\n")
     print(x$call)
     cat("\n",
-        length(na.omit(x$y)), " training documents; ",
-        nfeat(na.omit(x)), " fitted features.",
-        "\n",
+        format(length(na.omit(x$y)), big.mark = ","), " training documents; ",
+        format(length(x$weights), big.mark = ","), " fitted features",
+        if (x$scale) " (scaled)",
+        ".\n",
         "Method: ", x$algorithm, "\n",
         sep = "")
 }

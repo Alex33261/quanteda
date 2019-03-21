@@ -4,7 +4,8 @@
 \alias{textmodel_svm}
 \title{Linear SVM classifier for texts}
 \usage{
-textmodel_svm(x, y, weight = c("uniform", "docfreq", "termfreq"), ...)
+textmodel_svm(x, y, scale = TRUE, weight = c("uniform", "docfreq",
+  "termfreq"), ...)
 }
 \arguments{
 \item{x}{the \link{dfm} on which the model will be fit.  Does not need to
@@ -13,6 +14,9 @@ contain only the training documents.}
 \item{y}{vector of training labels associated with each document identified 
 in \code{train}.  (These will be converted to factors if not already 
 factors.)}
+
+\item{scale}{logical; if \code{TRUE}, scale the input dfm by centering on its
+mean and dividing by the standard deviation of feature counts.}
 
 \item{weight}{weights for different classes for imbalanced training sets,
 passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}
@@ -27,13 +31,19 @@ Fit a fast linear SVM classifier for texts, using the
 \pkg{LiblineaR} package.
 }
 \examples{
-# use Lenihan for govt class and Bruton for opposition
-docvars(data_corpus_irishbudget2010, "govtopp") <- c("Govt", "Opp", rep(NA, 12))
+# use party leaders for govt and opposition classes
+docvars(data_corpus_irishbudget2010, "govtopp") <- 
+    c(rep(NA, 4), "Govt", "Opp", NA, "Opp", NA, NA, NA, NA, NA, NA)
 dfmat <- dfm(data_corpus_irishbudget2010)
-
 tmod <- textmodel_svm(dfmat, y = docvars(dfmat, "govtopp"))
 predict(tmod)
 predict(tmod, type = "probability")
+
+# multiclass problem - all party leaders
+tmod2 <- textmodel_svm(dfmat, 
+    y = c(rep(NA, 3), "SF", "FF", "FG", NA, "LAB", NA, NA, "Green", rep(NA, 3)))
+predict(tmod2)
+predict(tmod2, type = "probability")
 }
 \references{
 R. E. Fan, K. W. Chang, C. J. Hsieh, X. R. Wang, and C. J. Lin. (2008)
