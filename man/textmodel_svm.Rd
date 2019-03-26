@@ -4,8 +4,7 @@
 \alias{textmodel_svm}
 \title{Linear SVM classifier for texts}
 \usage{
-textmodel_svm(x, y, scale = TRUE, weight = c("uniform", "docfreq",
-  "termfreq"), ...)
+textmodel_svm(x, y, weight = c("uniform", "docfreq", "termfreq"), ...)
 }
 \arguments{
 \item{x}{the \link{dfm} on which the model will be fit.  Does not need to
@@ -14,9 +13,6 @@ contain only the training documents.}
 \item{y}{vector of training labels associated with each document identified 
 in \code{train}.  (These will be converted to factors if not already 
 factors.)}
-
-\item{scale}{logical; if \code{TRUE}, scale the input dfm by centering on its
-mean and dividing by the standard deviation of feature counts.}
 
 \item{weight}{weights for different classes for imbalanced training sets,
 passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}

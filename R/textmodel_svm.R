@@ -7,8 +7,6 @@
 #' @param y vector of training labels associated with each document identified 
 #'   in \code{train}.  (These will be converted to factors if not already 
 #'   factors.)
-#' @param scale logical; if \code{TRUE}, scale the input dfm by centering on its
-#'   mean and dividing by the standard deviation of feature counts.
 #' @param weight weights for different classes for imbalanced training sets,
 #'   passed to \code{wi} in \code{\link[LiblineaR]{LiblineaR}}. \code{"uniform"}
 #'   uses default; \code{"docfreq"} weights by the number of training examples,
@@ -36,26 +34,28 @@
 #' predict(tmod2)
 #' predict(tmod2, type = "probability")
 #' @export
-textmodel_svm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     UseMethod("textmodel_svm")
 }
 
 #' @export
-textmodel_svm.default <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm.default <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     stop(friendly_class_undefined_message(class(x), "textmodel_svm"))
 }    
     
 #' @export
 #' @importFrom LiblineaR LiblineaR
 #' @importFrom SparseM as.matrix.csr
-textmodel_svm.dfm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq", "termfreq"), ...) {
+textmodel_svm.dfm <- function(x, y, weight = c("uniform", "docfreq", "termfreq"), ...) {
     x <- as.dfm(x)
     if (!sum(x)) stop(message_error("dfm_empty"))
     call <- match.call()
     weight <- match.arg(weight)
     
     # exclude NA in training labels
-    x_train <- dfm_trim(x[!is.na(y), ], min_termfreq = 1)
+    x_train <- suppressWarnings(
+        dfm_trim(x[!is.na(y), ], min_termfreq = .0000000001, termfreq_type = "prop")
+    )
     y_train <- y[!is.na(y)]
     # remove zero-variance features
     constant_features <- which(apply(x_train, 2, stats::var) == 0)
@@ -71,7 +71,7 @@ textmodel_svm.dfm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq
         wi <- wi / sum(wi)
     }
     
-    svmlinfitted <- LiblineaR::LiblineaR(data = if (scale) scale(x_train) else as.matrix.csr.dfm(x_train),
+    svmlinfitted <- LiblineaR::LiblineaR(as.matrix.csr.dfm(x_train),
                                          target = y_train, wi = wi, ...)
     colnames(svmlinfitted$W)[seq_along(featnames(x_train))] <- featnames(x_train)
     result <- list(
@@ -82,7 +82,6 @@ textmodel_svm.dfm <- function(x, y, scale = TRUE, weight = c("uniform", "docfreq
         classnames = svmlinfitted$ClassNames,
         bias = svmlinfitted$Bias,
         svmlinfitted = svmlinfitted,
-        scale = scale,
         call = call
     )
     class(result) <- c("textmodel_svm", "textmodel", "list")
@@ -121,9 +120,6 @@ predict.textmodel_svm <- function(object, newdata = NULL,
         data <- as.dfm(object$x)
     }
     
-    # scale the test data if the training data was also scaled
-    if (object$scale) data <- as.dfm(scale(data))
-
     # the seq_along is because this will have an added term "bias" at end if bias > 0
     model_featnames <- colnames(object$weights)
     if (object$bias > 0) model_featnames <- model_featnames[-length(model_featnames)]
@@ -156,7 +152,6 @@ print.textmodel_svm <- function(x, ...) {
     cat("\n",
         format(length(na.omit(x$y)), big.mark = ","), " training documents; ",
         format(length(x$weights), big.mark = ","), " fitted features",
-        if (x$scale) " (scaled)",
         ".\n",
         "Method: ", x$algorithm, "\n",
         sep = "")
